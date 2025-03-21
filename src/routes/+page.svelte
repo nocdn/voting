@@ -15,6 +15,13 @@
 			email: emailInput,
 			password: passwordInput
 		});
+
+		if (data.session) {
+			window.location.href = '/admin';
+		} else if (error) {
+			console.error('Login failed:', error.message);
+			alert('Login failed. Please check your credentials.');
+		}
 	}
 </script>
 
