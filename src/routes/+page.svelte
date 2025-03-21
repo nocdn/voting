@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { createClient } from '@supabase/supabase-js';
-	const supabase = createClient(
-		'https://dduxgrvpsfbjilpaqyay.supabase.co',
-		'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkdXhncnZwc2ZiamlscGFxeWF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI1MDY5MzQsImV4cCI6MjA1ODA4MjkzNH0.xR5iQMZq5CyMv2xBkCQhpFf0HRNjkg_zqMooRiYyd28'
-	);
+	import { supabase } from '$lib/supabase';
+	import Spinner from '$lib/Spinner.svelte';
 
-	let passwordInput: string;
-	let emailInput: string;
+	let passwordInput: string = $state('');
+	let emailInput: string = $state('');
+	let loading: boolean = $state(false);
 
 	async function supabaseLogin() {
 		console.log('login pressed');
+		loading = true;
 
 		const { data, error } = await supabase.auth.signInWithPassword({
 			email: emailInput,
@@ -20,31 +19,88 @@
 			window.location.href = '/admin';
 		} else if (error) {
 			console.error('Login failed:', error.message);
+			loading = false;
 			alert('Login failed. Please check your credentials.');
+		}
+	}
+
+	let votingCode: string = $state('');
+	let codeVerified: boolean = $state(false);
+	let invalidCode: boolean = $state(false);
+	let alreadyVoted: boolean = $state(false);
+
+	async function verifyCode() {
+		console.log('verifyCode');
+		console.log('votingCode:', votingCode);
+		const { data, error } = await supabase.from('users').select('*').eq('code', votingCode);
+
+		if (data) {
+			console.log('data:', data);
+			if (data.length > 0) {
+				if (data[0].has_voted) {
+					alreadyVoted = true;
+				} else {
+					codeVerified = true;
+				}
+			} else {
+				invalidCode = true;
+				setTimeout(() => {
+					invalidCode = false;
+				}, 2000);
+			}
+		} else if (error) {
+			console.error('Error:', error.message);
 		}
 	}
 </script>
 
 <container class="w-vw grid h-dvh place-items-center">
+	<voting class="flex flex-col gap-5 font-mono">
+		<p>vote</p>
+		<form class="flex flex-col gap-1" autocomplete="off">
+			<input
+				type="text"
+				data-1p-ignore
+				placeholder="voting code"
+				bind:value={votingCode}
+				class="focus:outline-none"
+			/>
+			<button
+				onclick={verifyCode}
+				class="mt-3 w-fit cursor-pointer border border-gray-200 px-3 py-2 {invalidCode
+					? 'cursor-default text-red-700'
+					: ''}">{invalidCode ? 'invalid code' : 'verify code'}</button
+			>
+		</form>
+	</voting>
 	<main class="flex flex-col gap-5 font-mono">
-		<p>voting page</p>
+		<p>admin login</p>
 		<form class="flex flex-col gap-1" autocomplete="off">
 			<input
 				type="email"
+				data-1p-ignore
 				placeholder="email@example.com"
 				bind:value={emailInput}
 				class="focus:outline-none"
 			/>
 			<input
 				type="password"
+				data-1p-ignore
 				placeholder="password"
 				bind:value={passwordInput}
 				class="focus:outline-none"
 			/>
-			<button
-				onclick={supabaseLogin}
-				class="mt-3 w-fit cursor-pointer border border-gray-200 px-3 py-2">login</button
-			>
+			<div class="mt-3 flex w-fit items-center justify-center gap-3">
+				<button
+					onclick={supabaseLogin}
+					class="mt-3 w-fit cursor-pointer border border-gray-200 px-3 py-2">login</button
+				>
+				{#if loading}
+					<div class="mt-3 flex h-full w-fit flex-col items-center justify-center">
+						<Spinner />
+					</div>
+				{/if}
+			</div>
 		</form>
 	</main>
 </container>
