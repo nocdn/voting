@@ -42,11 +42,17 @@
 			if (data.length > 0) {
 				if (data[0].has_voted) {
 					alreadyVoted = true;
+					voteCheckLoading = false;
+
+					setTimeout(() => {
+						alreadyVoted = false;
+					}, 2000);
 				} else {
 					codeVerified = true;
 				}
 			} else {
 				invalidCode = true;
+				voteCheckLoading = false;
 				setTimeout(() => {
 					invalidCode = false;
 				}, 2000);
@@ -60,12 +66,13 @@
 		console.log('agreeCandidates');
 		const { data, error } = await supabase
 			.from('users')
-			.update({ agreed_candidates: true })
+			.update({ agreed_candidates: true, has_voted: true })
 			.eq('code', votingCode);
 
 		if (data) {
 			console.log('data:', data);
 			doneVoting = true;
+			window.location.href = '/thankyou';
 		} else if (error) {
 			console.error('Error:', error.message);
 		}
@@ -100,9 +107,12 @@
 					<div class="mt-3 flex w-fit items-center justify-center gap-3">
 						<button
 							onclick={verifyCode}
-							class="w-fit cursor-pointer border border-gray-200 px-3 py-2 {invalidCode
-								? 'cursor-default text-red-700'
-								: ''}">{invalidCode ? 'invalid code' : 'verify code'}</button
+							class="w-fit cursor-pointer border border-gray-200 px-3 py-2 {invalidCode ||
+							alreadyVoted
+								? 'cursor-default font-semibold text-red-700'
+								: ''}"
+							>{#if invalidCode}invalid code{:else if alreadyVoted}code already used{:else}verify
+								code{/if}</button
 						>
 						{#if voteCheckLoading}
 							<Spinner />
