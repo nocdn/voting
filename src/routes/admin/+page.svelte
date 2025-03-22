@@ -110,6 +110,8 @@
 	let loadingResults: boolean = $state(false);
 	let agreedUsers: Array<string> = $state([]);
 	let disagreedUsers: Array<string> = $state([]);
+	let notVotedUsers: Array<string> = $state([]);
+	let totalUsers: number = $state(0);
 
 	async function seeResults() {
 		console.log('seeResults');
@@ -125,13 +127,17 @@
 			data.forEach((user) => {
 				if (user.agreed_candidates) {
 					agreedUsers.push(user.email);
-				} else {
+				} else if (user.has_voted && !user.agreed_candidates) {
 					disagreedUsers.push(user.email);
+				} else if (!user.has_voted) {
+					notVotedUsers.push(user.email);
 				}
 			});
 			loadingResults = false;
 			console.log('agreedUsers:', agreedUsers);
 			console.log('disagreedUsers:', disagreedUsers);
+			totalUsers = agreedUsers.length + disagreedUsers.length;
+			console.log('totalUsers:', totalUsers);
 		} else if (error) {
 			console.error('Error:', error.message);
 		}
@@ -177,19 +183,33 @@ alice@example.com"
 				<Spinner />
 			{/if}
 		</div>
-		<div class="pl-0.5">
-			{#if agreedUsers.length > 0}
-				<p class="mb-2 font-semibold">agreed users:</p>
-			{/if}
-			{#each agreedUsers as email}
-				<p>{email}</p>
-			{/each}
-			{#if disagreedUsers.length > 0}
-				<p class="mb-2 font-semibold">disagreed users:</p>
-			{/if}
-			{#each disagreedUsers as email}
-				<p>{email}</p>
-			{/each}
-		</div>
+		{#if totalUsers > 0}
+			<div class="grid grid-cols-3 gap-x-8 pl-0.5">
+				<div class="border border-gray-200 px-2.5 py-2">
+					{#if agreedUsers.length > 0}
+						<p class="mb-2 font-semibold">agreed users:</p>
+					{/if}
+					{#each agreedUsers as email}
+						<p>{email}</p>
+					{/each}
+				</div>
+				<div class="border border-gray-200 px-2.5 py-2">
+					{#if disagreedUsers.length > 0}
+						<p class="mb-2 font-semibold">disagreed users:</p>
+					{/if}
+					{#each disagreedUsers as email}
+						<p>{email}</p>
+					{/each}
+				</div>
+				<div class="border border-gray-200 px-2.5 py-2">
+					{#if notVotedUsers.length > 0}
+						<p class="mb-2 font-semibold">not voted users:</p>
+					{/if}
+					{#each notVotedUsers as email}
+						<p>{email}</p>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	</results>
 </container>
