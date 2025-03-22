@@ -62,17 +62,31 @@
 		}
 	}
 
-	let loadingAgree: boolean = $state(false);
+	let loadingChoice: boolean = $state(false);
 	async function agreeCandidates() {
 		console.log('agreeCandidates');
-		loadingAgree = true;
+		loadingChoice = true;
 		const { data, error } = await supabase
 			.from('users')
 			.update({ agreed_candidates: true, has_voted: true })
 			.eq('code', votingCode);
 
 		doneVoting = true;
-		loadingAgree = false;
+		window.location.href = '/thankyou';
+		if (error) {
+			console.error('Error:', error.message);
+		}
+	}
+
+	async function disagreeCandidates() {
+		console.log('disagreeCandidates');
+		loadingChoice = true;
+		const { data, error } = await supabase
+			.from('users')
+			.update({ agreed_candidates: false, has_voted: true })
+			.eq('code', votingCode);
+
+		doneVoting = true;
 		window.location.href = '/thankyou';
 		if (error) {
 			console.error('Error:', error.message);
@@ -137,7 +151,11 @@
 						onclick={agreeCandidates}
 						class="w-fit cursor-pointer border border-gray-200 px-3 py-2">agree</button
 					>
-					{#if loadingAgree}
+					<button
+						onclick={disagreeCandidates}
+						class="w-fit cursor-pointer border border-gray-200 px-3 py-2">disagree</button
+					>
+					{#if loadingChoice}
 						<Spinner />
 					{/if}
 				</div>
