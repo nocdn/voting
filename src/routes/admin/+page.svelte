@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase';
 	import Spinner from '$lib/Spinner.svelte';
+	import Check from '$lib/Check.svelte';
+	import type { List } from 'lucide-svelte';
 
 	let emails: string = $state('');
 	let usersCreated: boolean = $state(false);
@@ -36,6 +38,7 @@
 		}
 	}
 
+	let invalidEmails: Array<string> = $state([]);
 	async function submitEmails() {
 		console.log('submitEmails');
 		const emailList = emails
@@ -44,7 +47,26 @@
 			.filter((email) => email);
 		console.log('Email List:', emailList);
 
-		const emailData = emailList.map((email) => {
+		invalidEmails = [];
+		const validEmails: Array<string> = [];
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		emailList.forEach((email) => {
+			if (emailRegex.test(email)) {
+				validEmails.push(email);
+			} else {
+				invalidEmails.push(email);
+			}
+		});
+
+		console.log('Valid Emails:', validEmails);
+		console.log('Invalid Emails:', invalidEmails);
+
+		if (validEmails.length === 0) {
+			console.warn('No valid emails to insert.');
+			return;
+		}
+
+		const emailData = validEmails.map((email) => {
 			const code = Math.random().toString(36).slice(-8);
 			return { email, code, has_voted: false, agreed_candidates: false };
 		});
@@ -61,9 +83,14 @@
 		}
 	}
 
+	let resetCheckShown: boolean = $state(false);
 	async function resetEmails() {
 		console.log('resetEmails');
 		const { data, error } = await supabase.from('users').delete().neq('id', 0);
+		resetCheckShown = true;
+		setTimeout(() => {
+			resetCheckShown = false;
+		}, 2000);
 
 		if (data) {
 			console.log('data:', data);
@@ -72,6 +99,8 @@
 		}
 	}
 
+	let backendUrl: string = $state('');
+	let noBackendUrl: boolean = $state(false);
 	async function sendEmailsWithCodes() {
 		console.log('sendEmailsWithCodes');
 		const { data, error } = await supabase.from('users').select('email, code');
@@ -83,8 +112,15 @@
 		}
 
 		console.log('passing emails and codes to backend');
+		if (backendUrl === '') {
+			noBackendUrl = true;
+			setTimeout(() => {
+				noBackendUrl = false;
+			}, 2000);
+			return;
+		}
 
-		const backendResponse = await fetch('/api/emails', {
+		const backendResponse = await fetch(backendUrl, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -160,21 +196,47 @@ alice@example.com"
 		></textarea>
 		<div class="flex w-fit items-center justify-center gap-3">
 			<button onclick={submitEmails} class="w-fit cursor-pointer border border-gray-200 px-3 py-2"
-				>generate codes</button
+				>generate codes in database</button
+			>
+		</div>
+		{#if invalidEmails.length > 0}
+			<p class="text-red-700">invalid emails:</p>
+			<div>
+				{#each invalidEmails as email}
+					<p>{email}</p>
+				{/each}
+			</div>
+		{/if}
+		<div>
+			<p class="mt-6 mb-1.5">backend url:</p>
+			<input
+				class="w-80 border border-gray-200 px-2.5 py-1.5 focus:outline-none {noBackendUrl
+					? 'outline-2 outline-red-700'
+					: ''}"
+				type="text"
+				bind:value={backendUrl}
+				placeholder="134.123.123.123:8010/api/emails"
+			/>
+		</div>
+		<div class="flex w-fit items-center justify-center gap-3">
+			<button onclick={resetEmails} class="w-fit cursor-pointer border border-gray-200 px-3 py-2"
+				>reset table</button
 			>
 			{#if usersCreated}
 				<button
 					onclick={sendEmailsWithCodes}
-					class="w-fit cursor-pointer border border-gray-200 px-3 py-2"
-					>send emails with codes</button
+					class="w-fit cursor-pointer border border-gray-200 px-3 py-2 {noBackendUrl
+						? 'cursor-default font-semibold text-red-700'
+						: ''}"
+					>{#if noBackendUrl}backend url required{:else}send emails with codes{/if}</button
 				>
 			{/if}
+			{#if resetCheckShown}
+				<Check />
+			{/if}
 		</div>
-		<button onclick={resetEmails} class="w-fit cursor-pointer border border-gray-200 px-3 py-2"
-			>reset table</button
-		>
 	</main>
-	<results class="flex flex-col gap-3">
+	<results class="mb-8 flex flex-col gap-3">
 		<div class="flex w-fit items-center justify-center gap-3">
 			<button onclick={seeResults} class="w-fit cursor-pointer border border-gray-200 px-3 py-2"
 				>see results</button
